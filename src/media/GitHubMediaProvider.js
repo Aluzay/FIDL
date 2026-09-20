@@ -38,11 +38,10 @@ export class GitHubMediaProvider extends MediaProvider {
     async githubRequest(url, options = {}) {
         const response = await fetch(url, {
             ...options,
-
             headers: {
                 Accept: "application/vnd.github+json",
                 Authorization: `Bearer ${this.token}`,
-                "X-GitHub-Api-Version": "2026-03-10",
+                "X-GitHub-Api-Version": "2022-11-28",
                 ...(options.headers ?? {})
             }
         });
@@ -60,44 +59,35 @@ export class GitHubMediaProvider extends MediaProvider {
 
     async upload(filePath) {
         const absolutePath = path.resolve(filePath);
-
         const file = await fs.readFile(absolutePath);
 
         const extension = path.extname(absolutePath);
-
         const fileName =
             `${Date.now()}-${crypto.randomUUID()}${extension}`;
 
         const repositoryPath =
             `${this.folder}/${fileName}`;
 
-        const url =
+        const apiUrl =
             `${this.baseUrl}/repos/${this.owner}/${this.repo}/contents/${repositoryPath}`;
 
         const result = await this.githubRequest(
-            url,
+            apiUrl,
             {
                 method: "PUT",
-
                 headers: {
                     "Content-Type": "application/json"
                 },
-
                 body: JSON.stringify({
                     message:
                         `FIDL temporary media upload: ${fileName}`,
-
-                    content:
-                        file.toString("base64"),
-
-                    branch:
-                        this.branch
+                    content: file.toString("base64"),
+                    branch: this.branch
                 })
             }
         );
 
-        const sha =
-            result.content?.sha;
+        const sha = result.content?.sha;
 
         if (!sha) {
             throw new Error(
@@ -105,13 +95,11 @@ export class GitHubMediaProvider extends MediaProvider {
             );
         }
 
-        const rawUrl =
-            `https://raw.githubusercontent.com/${this.owner}/${this.repo}/${this.branch}/${repositoryPath}`;
-
         return {
             id: repositoryPath,
             sha,
-            url: rawUrl
+            url:
+                `https://raw.githubusercontent.com/${this.owner}/${this.repo}/${this.branch}/${repositoryPath}`
         };
     }
 
@@ -120,27 +108,21 @@ export class GitHubMediaProvider extends MediaProvider {
             return;
         }
 
-        const url =
+        const apiUrl =
             `${this.baseUrl}/repos/${this.owner}/${this.repo}/contents/${media.id}`;
 
         await this.githubRequest(
-            url,
+            apiUrl,
             {
                 method: "DELETE",
-
                 headers: {
                     "Content-Type": "application/json"
                 },
-
                 body: JSON.stringify({
                     message:
                         `FIDL temporary media cleanup: ${media.id}`,
-
-                    sha:
-                        media.sha,
-
-                    branch:
-                        this.branch
+                    sha: media.sha,
+                    branch: this.branch
                 })
             }
         );

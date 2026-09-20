@@ -1,78 +1,63 @@
 import {
     MediaResolver
-} from "./media/MediaResolver.js";
+} from "../media/MediaResolver.js";
 
 export class InstagramClient {
     constructor({
         accessToken,
         userId,
-        mediaProvider = null
+        mediaProvider = null,
+        apiVersion = "v26.0"
     }) {
         if (!accessToken) {
-            throw new Error(
-                "accessToken is required"
-            );
+            throw new Error("accessToken is required");
         }
 
         if (!userId) {
-            throw new Error(
-                "userId is required"
-            );
+            throw new Error("userId is required");
         }
 
         this.accessToken = accessToken;
         this.userId = userId;
-
         this.baseUrl =
-            "https://graph.instagram.com/v26.0";
+            `https://graph.instagram.com/${apiVersion}`;
 
         this.mediaResolver =
             new MediaResolver(mediaProvider);
     }
 
-    async request(path, options = {}) {
-        const {
+    async request(
+        path,
+        {
             method = "GET",
             params = {},
             body = null
-        } = options;
+        } = {}
+    ) {
+        const url = new URL(`${this.baseUrl}${path}`);
 
-        const url =
-            new URL(`${this.baseUrl}${path}`);
-
-        for (
-            const [key, value]
-            of Object.entries(params)
-        ) {
-            url.searchParams.set(
-                key,
-                value
-            );
+        for (const [key, value] of Object.entries(params)) {
+            url.searchParams.set(key, value);
         }
 
         const response = await fetch(
             url,
             {
                 method,
-
                 headers: {
                     Authorization:
                         `Bearer ${this.accessToken}`,
-
                     ...(body && {
-                        "Content-Type":
-                            "application/json"
+                        "Content-Type": "application/json"
                     })
                 },
-
                 ...(body && {
                     body: JSON.stringify(body)
                 })
             }
         );
 
-        const data =
-            await response.json();
+        const data = await response.json();
 
         if (!response.ok) {
             throw new Error(
@@ -107,15 +92,12 @@ export class InstagramClient {
         );
     }
 
-    async getContainerStatus(
-        containerId
-    ) {
+    async getContainerStatus(containerId) {
         return this.request(
             `/${containerId}`,
             {
                 params: {
-                    fields:
-                        "status_code,status"
+                    fields: "status_code,status"
                 }
             }
         );
@@ -128,49 +110,32 @@ export class InstagramClient {
             timeout = 60000
         } = {}
     ) {
-        const startedAt =
-            Date.now();
+        const startedAt = Date.now();
 
-        while (
-            Date.now() - startedAt
-            < timeout
-        ) {
+        while (Date.now() - startedAt < timeout) {
             const container =
                 await this.getContainerStatus(
                     containerId
                 );
 
-            if (
-                container.status_code
-                === "FINISHED"
-            ) {
+            if (container.status_code === "FINISHED") {
                 return container;
             }
 
-            if (
-                container.status_code
-                === "ERROR"
-            ) {
+            if (container.status_code === "ERROR") {
                 throw new Error(
                     `Instagram media processing failed: ${container.status}`
                 );
             }
 
-            if (
-                container.status_code
-                === "EXPIRED"
-            ) {
+            if (container.status_code === "EXPIRED") {
                 throw new Error(
                     "Instagram media container expired"
                 );
             }
 
-            await new Promise(
-                resolve =>
-                    setTimeout(
-                        resolve,
-                        interval
-                    )
+            await new Promise(resolve =>
+                setTimeout(resolve, interval)
             );
         }
 
@@ -179,17 +144,13 @@ export class InstagramClient {
         );
     }
 
-    async publishContainer(
-        containerId
-    ) {
+    async publishContainer(containerId) {
         return this.request(
             `/${this.userId}/media_publish`,
             {
                 method: "POST",
-
                 body: {
-                    creation_id:
-                        containerId
+                    creation_id: containerId
                 }
             }
         );
@@ -199,67 +160,16 @@ export class InstagramClient {
         imageUrl,
         caption = ""
     }) {
-        const result =
-            await this.request(
-                `/${this.userId}/media`,
-                {
-                    method: "POST",
-
-                    body: {
-                        image_url:
-                            imageUrl,
-
-                        caption
-                    }
+        const result = await this.request(
+            `/${this.userId}/media`,
+            {
+                method: "POST",
+                body: {
+                    image_url: imageUrl,
+                    caption
                 }
-            );
-
-        return result.id;
-    }
-
-    async createCarouselItem(
-        imageUrl
-    ) {
-        const result =
-            await this.request(
-                `/${this.userId}/media`,
-                {
-                    method: "POST",
-
-                    body: {
-                        image_url:
-                            imageUrl,
-
-                        is_carousel_item:
-                            true
-                    }
-                }
-            );
-
-        return result.id;
-    }
-
-    async createCarouselContainer({
-        children,
-        caption = ""
-    }) {
-        const result =
-            await this.request(
-                `/${this.userId}/media`,
-                {
-                    method: "POST",
-
-                    body: {
-                        media_type:
-                            "CAROUSEL",
-
-                        children:
-                            children.join(","),
-
-                        caption
-                    }
-                }
-            );
+            }
+        );
 
         return result.id;
     }
@@ -269,21 +179,14 @@ export class InstagramClient {
         imageUrl,
         caption = ""
     }) {
-        // imageUrl gardé pour compatibilité
-        // avec ton ancien code
-        const source =
-            image ?? imageUrl;
+        const source = image ?? imageUrl;
 
         if (!source) {
-            throw new Error(
-                "image is required"
-            );
+            throw new Error("image is required");
         }
 
         const media =
-            await this.mediaResolver.resolve(
-                source
-            );
+            await this.mediaResolver.resolve(source);
 
         try {
             const containerId =
@@ -292,20 +195,50 @@ export class InstagramClient {
                     caption
                 });
 
-            await this.waitForContainer(
-                containerId
-            );
+            await this.waitForContainer(containerId);
 
             return await this.publishContainer(
                 containerId
             );
         } finally {
             await Promise.allSettled([
-                this.mediaResolver.cleanup(
-                    media
-                )
+                this.mediaResolver.cleanup(media)
             ]);
         }
+    }
+
+    async createCarouselItem(imageUrl) {
+        const result = await this.request(
+            `/${this.userId}/media`,
+            {
+                method: "POST",
+                body: {
+                    image_url: imageUrl,
+                    is_carousel_item: true
+                }
+            }
+        );
+
+        return result.id;
+    }
+
+    async createCarouselContainer({
+        children,
+        caption = ""
+    }) {
+        const result = await this.request(
+            `/${this.userId}/media`,
+            {
+                method: "POST",
+                body: {
+                    media_type: "CAROUSEL",
+                    children: children.join(","),
+                    caption
+                }
+            }
+        );
+
+        return result.id;
     }
 
     async publishPhotos({
@@ -313,14 +246,10 @@ export class InstagramClient {
         imageUrls,
         caption = ""
     }) {
-        // Compatibilité avec l'ancien nom
-        const sources =
-            images ?? imageUrls;
+        const sources = images ?? imageUrls;
 
         if (!Array.isArray(sources)) {
-            throw new Error(
-                "images must be an array"
-            );
+            throw new Error("images must be an array");
         }
 
         if (sources.length < 2) {
@@ -329,35 +258,32 @@ export class InstagramClient {
             );
         }
 
+        if (sources.length > 10) {
+            throw new Error(
+                "Instagram carousels support up to 10 media items"
+            );
+        }
+
         const resolvedMedia = [];
         const childIds = [];
 
         try {
-            for (
-                const source
-                of sources
-            ) {
+            for (const source of sources) {
                 const media =
                     await this.mediaResolver.resolve(
                         source
                     );
 
-                resolvedMedia.push(
-                    media
-                );
+                resolvedMedia.push(media);
 
                 const childId =
                     await this.createCarouselItem(
                         media.url
                     );
 
-                await this.waitForContainer(
-                    childId
-                );
+                await this.waitForContainer(childId);
 
-                childIds.push(
-                    childId
-                );
+                childIds.push(childId);
             }
 
             const carouselId =
@@ -366,20 +292,15 @@ export class InstagramClient {
                     caption
                 });
 
-            await this.waitForContainer(
-                carouselId
-            );
+            await this.waitForContainer(carouselId);
 
             return await this.publishContainer(
                 carouselId
             );
         } finally {
             await Promise.allSettled(
-                resolvedMedia.map(
-                    media =>
-                        this.mediaResolver.cleanup(
-                            media
-                        )
+                resolvedMedia.map(media =>
+                    this.mediaResolver.cleanup(media)
                 )
             );
         }

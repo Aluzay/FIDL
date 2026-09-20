@@ -6,27 +6,24 @@ export class CloudinaryMediaProvider extends MediaProvider {
     constructor({
         cloudName,
         apiKey,
-        apiSecret
+        apiSecret,
+        folder = "fidl-temp"
     }) {
         super();
 
         if (!cloudName) {
-            throw new Error(
-                "Cloudinary cloudName is required"
-            );
+            throw new Error("Cloudinary cloudName is required");
         }
 
         if (!apiKey) {
-            throw new Error(
-                "Cloudinary apiKey is required"
-            );
+            throw new Error("Cloudinary apiKey is required");
         }
 
         if (!apiSecret) {
-            throw new Error(
-                "Cloudinary apiSecret is required"
-            );
+            throw new Error("Cloudinary apiSecret is required");
         }
+
+        this.folder = folder;
 
         cloudinary.config({
             cloud_name: cloudName,
@@ -37,14 +34,13 @@ export class CloudinaryMediaProvider extends MediaProvider {
     }
 
     async upload(filePath) {
-        const result =
-            await cloudinary.uploader.upload(
-                filePath,
-                {
-                    resource_type: "auto",
-                    folder: "fidl-temp"
-                }
-            );
+        const result = await cloudinary.uploader.upload(
+            filePath,
+            {
+                resource_type: "auto",
+                folder: this.folder
+            }
+        );
 
         if (!result.secure_url) {
             throw new Error(
@@ -55,8 +51,7 @@ export class CloudinaryMediaProvider extends MediaProvider {
         return {
             id: result.public_id,
             url: result.secure_url,
-            resourceType:
-                result.resource_type
+            resourceType: result.resource_type
         };
     }
 
@@ -68,8 +63,7 @@ export class CloudinaryMediaProvider extends MediaProvider {
         await cloudinary.uploader.destroy(
             media.id,
             {
-                resource_type:
-                    media.resourceType ?? "image",
+                resource_type: media.resourceType ?? "image",
                 invalidate: true
             }
         );

@@ -9,40 +9,41 @@ export class MediaResolver {
     isRemoteUrl(source) {
         return (
             typeof source === "string" &&
-            (
-                source.startsWith("https://") ||
-                source.startsWith("http://")
-            )
+            (source.startsWith("https://") || source.startsWith("http://"))
         );
     }
 
-    async resolve(source) {
-        if (
-            typeof source !== "string" ||
-            source.trim() === ""
-        ) {
-            throw new Error(
-                "Media source must be a URL or local file path"
-            );
+    getCacheKey(source) {
+        if (typeof source !== "string") {
+            return source;
         }
 
-        // Déjà une URL publique
+        if (this.isRemoteUrl(source)) {
+            return `url:${source}`;
+        }
+
+        return `file:${path.resolve(source)}`;
+    }
+
+    async resolve(source) {
+        if (typeof source !== "string" || source.trim() === "") {
+            throw new Error("Media source must be a URL or local file path");
+        }
+
         if (this.isRemoteUrl(source)) {
             return {
+                source,
                 url: source,
                 temporary: false
             };
         }
 
-        // Sinon on considère que c'est un fichier local
         const filePath = path.resolve(source);
 
         try {
             await access(filePath);
         } catch {
-            throw new Error(
-                `Local media file not found: ${filePath}`
-            );
+            throw new Error(`Local media file not found: ${filePath}`);
         }
 
         if (!this.mediaProvider) {
@@ -51,8 +52,7 @@ export class MediaResolver {
             );
         }
 
-        const uploaded =
-            await this.mediaProvider.upload(filePath);
+        const uploaded = await this.mediaProvider.upload(filePath);
 
         if (!uploaded?.url) {
             throw new Error(
@@ -61,6 +61,7 @@ export class MediaResolver {
         }
 
         return {
+            source,
             url: uploaded.url,
             temporary: true,
             uploaded
@@ -68,16 +69,10 @@ export class MediaResolver {
     }
 
     async cleanup(media) {
-        if (!media?.temporary) {
+        if (!media?.temporary || !this.mediaProvider) {
             return;
         }
 
-        if (!this.mediaProvider) {
-            return;
-        }
-
-        await this.mediaProvider.remove(
-            media.uploaded
-        );
+        await this.mediaProvider.remove(media.uploaded);
     }
 }

@@ -1,8 +1,9 @@
 {
   "name": "fidl",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Publish shared content across multiple platforms with platform-specific formatting and media handling.",
+  "main": "./src/index.js",
+  "exports": "./src/index.js",
   "type": "module",
   "scripts": {
     "start": "node index.js",
@@ -12,9 +13,19 @@
     "type": "git",
     "url": "git+https://github.com/Aluzay/FIDL.git"
   },
-  "keywords": [],
+  "keywords": [
+    "instagram",
+    "facebook",
+    "discord",
+    "social-media",
+    "publishing",
+    "cross-posting"
+  ],
   "author": "",
   "license": "ISC",
+  "engines": {
+    "node": ">=18"
+  },
   "bugs": {
     "url": "https://github.com/Aluzay/FIDL/issues"
   },
