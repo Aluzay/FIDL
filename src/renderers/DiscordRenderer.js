@@ -1,3 +1,7 @@
+import {
+    dedent
+} from "./dedent.js";
+
 export class DiscordRenderer {
     render({
         message = "",
@@ -5,7 +9,7 @@ export class DiscordRenderer {
         here = false,
         mentions = {}
     } = {}) {
-        let content = String(message);
+        let content = dedent(message);
 
         const users = new Set(
             (mentions.users ?? []).map(String)

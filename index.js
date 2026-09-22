@@ -33,45 +33,69 @@ const fidl =
                 process.env.FACEBOOK_PAGE_ACCESS_TOKEN
         },
 
-        discord: process.env.DISCORD_WEBHOOK_URL
-            ? {
-                webhookUrl:
-                    process.env.DISCORD_WEBHOOK_URL
-            }
-            : null
+        discord: {
+            token:
+                process.env.DISCORD_BOT_TOKEN,
+
+            channelId:
+                process.env.DISCORD_CHANNEL_ID
+        }
     });
 
 try {
     const results =
         await fidl.publish({
             message:
-                "**Hello from FIDL!**",
+            `
+                {{everyone}}
+
+                # FIDL Markdown Test
+
+                **Bold text**
+
+                *Italic text*
+
+                __Underlined text__
+
+                ~~Strikethrough~~
+
+                ||Spoiler text||
+
+                > This is a quote
+
+                \`Inline code\`
+
+                \`\`\`js
+                console.log("Hello from FIDL");
+                \`\`\`
+
+                [OpenAI](https://openai.com)
+
+                {{role:1551685444201218088}}
+
+                Thanks {{user:428700127092408320}}!
+            `,
 
             media: [
-                "./photos/1.jpg",
-                "./photos/2.jpg",
-                "./photos/3.jpg"
+                "C:\\Users\\MiGHU\\Downloads\\Olivia Rodrigo Violet.jpg",
+                "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ29NYnKPA5S32Zj2JADLc4RSKi6hDFR5xTQ7VlUCo0GA&s=10",
+                "https://thumb.wikimedia.org/wikipedia/en/thumb/1/18/Olivia_Rodrigo_-_You_Seem_Pretty_Sad_for_a_Girl_So_in_Love.png/250px-Olivia_Rodrigo_-_You_Seem_Pretty_Sad_for_a_Girl_So_in_Love.png?utm_source=en.wikipedia.org&utm_campaign=parser&utm_content=thumbnail"
             ],
 
             platforms: {
                 instagram: {
-                    media: [0, 1]
-                },
-
-                facebook: {
                     media: [0, 1, 2]
                 },
 
-                ...(process.env.DISCORD_WEBHOOK_URL
-                    ? {
-                        discord: {
-                            everyone: true,
-                            media: [2]
+                facebook: {
+                    media: [0, 1]
+                },
+
+                discord: {
+                            media: [0]
                         }
                     }
-                    : {})
-            }
-        });
+            });
 
     console.dir(
         results,

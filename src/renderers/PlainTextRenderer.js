@@ -1,14 +1,21 @@
+import {
+    dedent
+} from "./dedent.js";
+
 export class PlainTextRenderer {
     render(message = "") {
-        return String(message)
+        return dedent(message)
             .replace(/\{\{everyone\}\}/gi, "")
             .replace(/\{\{here\}\}/gi, "")
             .replace(/\{\{user:\d+\}\}/gi, "")
             .replace(/\{\{role:\d+\}\}/gi, "")
             .replace(/```[a-zA-Z0-9_-]*\n?([\s\S]*?)```/g, "$1")
-            .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, "$1 ($2)")
-            .replace(/^\s{0,3}#{1,6}\s+/gm, "")
-            .replace(/^\s*>\s?/gm, "")
+            .replace(
+                /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,
+                "$1 ($2)"
+            )
+            .replace(/^[ \t]{0,3}#{1,6}[ \t]+/gm,"")
+            .replace(/^[ \t]*>[ \t]?/gm,"")
             .replace(/\*\*\*([\s\S]*?)\*\*\*/g, "$1")
             .replace(/___([\s\S]*?)___/g, "$1")
             .replace(/\*\*([\s\S]*?)\*\*/g, "$1")

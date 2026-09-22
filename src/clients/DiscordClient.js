@@ -1,12 +1,87 @@
 export class DiscordClient {
     constructor({
-        webhookUrl
+        token,
+        channelId
     }) {
-        if (!webhookUrl) {
-            throw new Error("webhookUrl is required");
+        if (!token) {
+            throw new Error(
+                "Discord bot token is required"
+            );
         }
 
-        this.webhookUrl = webhookUrl;
+        if (!channelId) {
+            throw new Error(
+                "Discord channelId is required"
+            );
+        }
+
+        this.token = token;
+        this.channelId = channelId;
+
+        this.baseUrl =
+            "https://discord.com/api/v10";
+    }
+
+    async downloadImage(
+        imageUrl,
+        index
+    ) {
+        const response =
+            await fetch(imageUrl);
+
+        if (!response.ok) {
+            throw new Error(
+                `Failed to download Discord image ${imageUrl}: ${response.status}`
+            );
+        }
+
+        const contentType =
+            response.headers.get(
+                "content-type"
+            ) ?? "application/octet-stream";
+
+        const extension =
+            this.getExtension(contentType);
+
+        const blob =
+            new Blob(
+                [
+                    await response.arrayBuffer()
+                ],
+                {
+                    type: contentType
+                }
+            );
+
+        return {
+            blob,
+            filename:
+                `image-${index}${extension}`
+        };
+    }
+
+    getExtension(contentType) {
+        switch (
+            contentType
+                .split(";")[0]
+                .trim()
+                .toLowerCase()
+        ) {
+            case "image/jpeg":
+                return ".jpg";
+
+            case "image/png":
+                return ".png";
+
+            case "image/gif":
+                return ".gif";
+
+            case "image/webp":
+                return ".webp";
+
+            default:
+                return "";
+        }
     }
 
     async publish({
@@ -18,38 +93,69 @@ export class DiscordClient {
     } = {}) {
         if (imageUrls.length > 10) {
             throw new Error(
-                "Discord webhook messages support up to 10 embeds"
+                "Discord supports up to 10 files per message"
             );
         }
 
-        const url = new URL(this.webhookUrl);
-        url.searchParams.set("wait", "true");
+        const form =
+            new FormData();
+
+        const attachments = [];
+
+        for (
+            let index = 0;
+            index < imageUrls.length;
+            index++
+        ) {
+            const file =
+                await this.downloadImage(
+                    imageUrls[index],
+                    index
+                );
+
+            attachments.push({
+                id: index,
+                filename: file.filename
+            });
+
+            form.append(
+                `files[${index}]`,
+                file.blob,
+                file.filename
+            );
+        }
 
         const payload = {
             content,
-            allowed_mentions: allowedMentions
+
+            allowed_mentions:
+                allowedMentions,
+
+            attachments
         };
 
-        if (imageUrls.length > 0) {
-            payload.embeds = imageUrls.map(imageUrl => ({
-                image: {
-                    url: imageUrl
-                }
-            }));
-        }
-
-        const response = await fetch(
-            url,
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(payload)
-            }
+        form.append(
+            "payload_json",
+            JSON.stringify(payload)
         );
 
-        const data = await response.json();
+        const response =
+            await fetch(
+                `${this.baseUrl}/channels/${this.channelId}/messages`,
+                {
+                    method: "POST",
+
+                    headers: {
+                        Authorization:
+                            `Bot ${this.token}`
+                    },
+
+                    body: form
+                }
+            );
+
+        const data =
+            await response.json();
 
         if (!response.ok) {
             throw new Error(
